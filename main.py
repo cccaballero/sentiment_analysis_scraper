@@ -25,7 +25,9 @@ def find(search_term):
 def query(article_url):
     base_query = Sentiment.select().join(Comment, JOIN.LEFT_OUTER).join(Article, JOIN.LEFT_OUTER).where(Article.url == article_url)
 
-    if not base_query.exists():
+    sentiments_count = base_query.count()
+
+    if not sentiments_count:
         print('No sentiment data for this article')
         exit(1)
 
@@ -33,6 +35,7 @@ def query(article_url):
     sentiments_neg = base_query.where(Sentiment.output == 'NEG')
     sentiments_neu = base_query.where(Sentiment.output == 'NEU')
 
+    print('Total:', sentiments_count)
     print("Positive:", sentiments_pos.count())
     print("Negative:", sentiments_neg.count())
     print("Neutral:", sentiments_neu.count())
