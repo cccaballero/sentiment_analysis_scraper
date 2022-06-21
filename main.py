@@ -8,11 +8,11 @@ from database import Sentiment, Comment, Article
 def sentiment_analysis():
     pass
 
-@sentiment_analysis.command()
+@sentiment_analysis.command(help='Start scraping and processing')
 def scrap():
     execute(['scrapy', 'runspider', 'reactions/spiders/cubadebate.py'])
 
-@sentiment_analysis.command()
+@sentiment_analysis.command(help='find articles in database')
 @click.argument('search_term')
 def find(search_term):
     query = Article.select().where(Article.title.contains(search_term))
@@ -20,10 +20,10 @@ def find(search_term):
         print(article.title, article.url)
 
 
-@sentiment_analysis.command()
-@click.argument('article')
-def query(article):
-    base_query = Sentiment.select().join(Comment, JOIN.LEFT_OUTER).join(Article, JOIN.LEFT_OUTER).where(Article.url == article)
+@sentiment_analysis.command(help='query an article comments sentiment information')
+@click.argument('article_url')
+def query(article_url):
+    base_query = Sentiment.select().join(Comment, JOIN.LEFT_OUTER).join(Article, JOIN.LEFT_OUTER).where(Article.url == article_url)
 
     if not base_query.exists():
         print('No sentiment data for this article')
