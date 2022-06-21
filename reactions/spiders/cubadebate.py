@@ -1,16 +1,9 @@
-from datetime import datetime, timedelta
-from unicodedata import name
+from datetime import datetime
 import scrapy
+from database import Article, Comment
+from reactions.spiders.base import BaseSpider
 
-from pysentimiento import create_analyzer
-
-from database import Article, Comment, Sentiment
-
-from analyze import sentiment_analyzer
-
-VISITING_TIME = 10
-
-class CubadebateSpider(scrapy.Spider):
+class CubadebateSpider(BaseSpider):
     name = 'cubadebate'
     allowed_domains = ['cubadebate.cu']
     start_urls = ['http://www.cubadebate.cu']
@@ -32,7 +25,7 @@ class CubadebateSpider(scrapy.Spider):
             except Article.DoesNotExist:
                 article = Article(title=title, url=url, uid=url, source=self.name, date=date, visited_at=None)
                 article.save()
-            if not article.visited_at or article.visited_at < datetime.now() - timedelta(days=VISITING_TIME):
+            if not self.already_visited(article):
                 article.visited_at = datetime.now()
                 article.save()
                 yield scrapy.Request(url, callback=self.parse_comments, meta={'article': article})
@@ -55,12 +48,7 @@ class CubadebateSpider(scrapy.Spider):
                 comment = Comment(article=article, uid=uid, author=author, body=body)
                 comment.save()
             
-            try:
-                sentiment = Sentiment.select().where(Sentiment.comment == comment).get()
-            except Sentiment.DoesNotExist:
-                output = sentiment_analyzer.predict(body)
-                sentiment = Sentiment(comment=comment, output=output.output, pos=output.probas["POS"], neg=output.probas["NEG"], neu=output.probas["NEU"])
-                sentiment.save()
+            self.store_sentiment(comment)
 
         next_page = response.css('div.wp-commentpagenavi a.next::attr(href)').get()
         if next_page is not None:
